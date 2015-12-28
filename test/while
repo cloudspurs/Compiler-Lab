@@ -1,0 +1,26 @@
+3 while 
+
+L0 ifc gotoL1
+goto L2
+L1 ifc gotoL3
+gotoL0
+L3 ifc gotoL4
+gotoL1
+L4 sen;
+gotoL3
+gotoL1
+gotoL0
+
+L0 ifc gotoL1
+goto L2
+L1 ifc gotoL3
+gotoL0
+L3 ifc gotoL4
+gotoL1
+L4 ifc gotpL5
+gotoL3
+L5 exp
+gotoL4
+gotoL3
+gotoL1
+gotoL0

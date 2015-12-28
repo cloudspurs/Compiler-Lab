@@ -1,0 +1,292 @@
+#include "node.h"
+#include <iostream>
+#include <string>
+#include <sstream>
+
+int ShowVisitor::index = 0;
+int CodeVisitor::t = 0;
+int CodeVisitor::l = 0;
+int CodeVisitor::whflag = 0;
+ 
+std::string CodeVisitor::senNext = "empty";
+std::string CodeVisitor::senStart = "empty";
+std::string CodeVisitor::pre = "empty";
+
+std::string Unary::Accept( const Visitor &v) const {
+	 return v.VisitUnary( this);
+}
+
+std::string Binary::Accept( const Visitor &v) const {
+	return v.VisitBinary( this);
+}
+
+std::string Number::Accept( const Visitor &v) const {
+	return v.VisitNumber( this);
+}
+
+std::string Variable::Accept( const Visitor &v) const {
+	return v.VisitVariable( this);
+}
+
+std::string Cal::Accept( const Visitor &v) const {
+	return v.VisitCal( this);
+}
+
+std::string Assign::Accept( const Visitor &v) const {
+	return v.VisitAssign( this);
+}
+
+std::string Iftn::Accept( const Visitor &v) const {
+	return v.VisitIftn( this);
+}
+
+std::string Whdo::Accept( const Visitor &v) const {
+	return v.VisitWhdo( this);
+} 
+
+
+std::string ShowVisitor::VisitUnary( const Unary *u) const {
+	ShowVisitor::print_index( index);
+	std::cout<<u->op<<std::endl;
+	index++; 
+	u->left->Accept ( *this);
+	index--; 	
+	return "0";
+}
+
+std::string ShowVisitor::VisitBinary( const Binary *b) const {
+	ShowVisitor::print_index( index);
+	std::cout<<b->op<<std::endl;
+	index++; 
+	b->left->Accept( *this);
+	b->right->Accept( *this);
+	index--; 
+	return "0";
+}
+
+std::string ShowVisitor::VisitNumber( const Number *n) const {
+	ShowVisitor::print_index( index);
+	std::cout<<n->value<<std::endl;
+	return "0";
+}
+
+std::string ShowVisitor::VisitVariable( const Variable *v) const {
+	ShowVisitor::print_index( index);
+	std::cout<<v->idname<<std::endl;
+	return "0";
+}
+
+std::string ShowVisitor::VisitCal( const Cal *c) const {
+	ShowVisitor::print_index( index);
+	std::cout<<c->op<<std::endl;
+	index++;
+	c->left->Accept( *this);
+	c->right->Accept( *this);
+	index--;
+	return "0";
+}
+
+
+std::string ShowVisitor::VisitAssign( const Assign *a) const {
+	ShowVisitor::print_index( index);
+	std::cout<<a->op<<std::endl;
+	index++;
+	a->var->Accept( *this);
+	a->exp->Accept( *this);
+	index--;
+	return "0";
+}
+
+std::string ShowVisitor::VisitIftn( const Ifth *i) const {
+ 	ShowVisitor::print_index( index);
+	std::cout<<i->op<<std::endl;
+	index++;
+	i->cal->Accept (*this);
+	i->t->Accept (*this);
+	if (s->f != NULL)
+		i->f->Accept (*this);
+	index--;
+	return "0";
+}
+
+std::string ShowVisitor::VisitWhdo( const Whdo *w) const {
+ 	ShowVisitor::print_index( index);
+	std::cout<<i->op<<std::endl;
+	index++;
+	w->cal->Accept( *this);
+	w->t->Accept( *this);
+	index--;
+	return "0";
+}
+
+ 
+std::string CodeVisitor::VisitNumber( const Number *n) const {
+	// 将valut转换为string类型并返回
+	std::stringstream temp;
+	temp<<n->value;
+	return temp.str();
+}
+
+std::string CodeVisitor::VisitVariable (const Variable *v) const {
+	return v->idname;
+}
+
+std::string CodeVisitor::VisitUnary( const Unary *u) const {
+	// 输出左子树的三地址代码，并给code1赋值
+	std::string code1 = u->left->Accept( *this);
+	// 生成新的临时变量t赋值给code
+	std::string code =  CodeVisitor::codeT();
+	// 输出三地址代码
+	std::cout<<code<<" = "<<u->op<<code1<<std::endl;
+	// 返回本条语句产生的临时变量t
+	return code;
+}
+
+std::string CodeVisitor::VisitBinary( const Binary *b) const {
+	// 左子树三地址代码，并给code1赋值	 	
+	std::string code1 = b->left->Accept( *this);
+	// 右子树三地址代码，并给code2赋值	
+	std::string code2 = b->right->Accept( *this);
+	// 生成新的临时变量t赋值给code
+	std::stringstream code = CodeVisitor::codeT();
+	// 输出三地址代码
+	std::cout<<code<<" = "<<code1<<b->op<<code2<<std::endl;
+	// 返回本条语句产生的临时变量t
+	return code;
+}
+
+std::string CodeVisitor::VisitCal( const Cal *c) const {
+	std::string code1 = c->left->Accept( *this);
+	std::string code2 = c->right->Accept( *this);
+	
+	std::cout<<code1<<c->op<<code2<<" ";
+	
+	return "0";
+}
+
+std::string CodeVisitor::VisitAssign( const Assign *a) const {
+	std::string code1 = a->var->Accept( *this);
+	std::string code2 = a->exp->Accept( *this);
+	
+	std::cout<<code1<<"="<<code2<<std::endl;
+
+	return "0";
+}
+
+std::string CodeVisitor::VisitSen(const Sen *s) const {
+	std::string ift;
+	std::string iff; 
+	int iflag = 0;
+	
+	if( senStart == "empty") { 
+		senStart = CodeVisitor::codeL();
+		std::cout<<senStart<<" ";
+		iflag = 1;
+	}	
+
+	// print cal		
+	s->cal->Accept(*this);
+
+	// print goto ift		
+	ift = CodeVisitor::codeL();
+	std::cout<<"goto"<<ift<<std::endl;
+
+
+	// if first sentence, generate senN label
+	// else print goto senN
+	if (senNext == "empty") {
+		senNext = CodeVisitor::codeL();			
+		if (s->f !=NULL) {
+			iff = CodeVisitor::codeL();
+			std::cout<<"goto"<<iff<<std::endl;
+		}
+		else
+			std::cout<<"goto"<<senNext<<std::endl;
+	}
+	else { 
+		if (s->f != NULL)
+			std::cout<<"goto"<<iff<<std::endl;			
+		else {			
+			if (whflag == 1) 
+				std::cout<<"goto"<<pre<<std::endl;
+			else
+				std::cout<<"goto"<<senNext<<std::endl;
+		}
+	}
+	// print ift label	
+	std::cout<<ift<<" ";
+
+	if (whflag != 1)
+		pre = senNext;
+
+
+	// print ift branch
+	s->t->Accept(*this); 
+
+	if (s->f != NULL)
+		std::cout<<"goto"<<senNext<<std::endl;
+
+	if (s->f != NULL ) {
+		std::cout<<iff<<" ";		
+		s->f->Accept(*this);
+	}
+	
+	//print senN label
+	if (iflag == 1) 
+		std::cout<<senNext<<" ";
+	
+	return "0";
+}
+
+std::string CodeVisitor::VisitWhdo( Whdo *w) {
+	std::string whStart;
+	std::string wht;
+	int wflag = 0;
+
+	whflag = 1;
+	// if first sentence, set senStart label
+	if (senStart == "empty") { 
+		senStart = whStart = CodeVisitor::codeL();
+		std::cout<<whStart<<" ";
+		wflag = 1;
+	}	
+	else {
+		whStart = CodeVisitor::codeL();
+		std::cout<<whStart<<" ";
+	}
+	
+	// print cal 	
+	s->cal->Accept(*this);
+	
+	// print goto wht
+	wht = CodeVisitor::codeL();
+	std::cout<<"goto"<<wht<<std::endl;
+	
+	// if first sentence, set senNext label
+	if (senNext == "empty") {
+		senNext = CodeVisitor::codeL();
+		std::cout<<"goto"<<senNext<<std::endl;
+	}
+	else { 
+		std::cout<<"goto"<<pre<<std::endl;
+	}
+	
+	pre = whStart;
+	
+	// print wht label
+	std::cout<<wht<<" ";
+	
+	// print wht sentence
+	s->t->Accept(*this);
+	
+	// go back cal
+	std::cout<<"goto"<<whStart<<std::endl;
+	
+	// first while
+	if (wflag == 1) 
+		std::cout<<senNext<<" ";
+
+	return "0";
+}
+
+
